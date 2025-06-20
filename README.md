@@ -55,10 +55,33 @@ Audio request UI: http://localhost:8000/api/v1/audio
 
 Streamlit UI: http://localhost:8501
 
-## 📌 Example API Flow
+## 📌 Example MultiAgent Flow
 1️⃣ User input (text or audio) →
 2️⃣ Planner Agent: Generates a plan →
 3️⃣ Recipe Agent: Selects recipes →
 4️⃣ Product Finder Agent: Finds products →
 5️⃣ Budgeting Agent: Checks budget →
 6️⃣ Finalizer Agent: Generates the final message & list
+
+## 🧪 Run Tests
+To run the tests:
+
+1️⃣ First, build and start the app using Docker.
+
+2️⃣ Update your .env file:
+
+Set
+```bash 
+REDIS_HOST=localhost
+```
+
+Set 
+```bash
+POSTGRES_HOST=localhost
+```
+
+3️⃣ Open a separate terminal and run:
+```bash
+pytest src/tests/test_praph.py
+```
+💡 Make sure the app and its services (Redis, Postgres) are up and running before executing tests.
