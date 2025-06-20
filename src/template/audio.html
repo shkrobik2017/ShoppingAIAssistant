@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Record Audio</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f1f1f1;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #90caf9;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    #startBtn {
+      background-color: #1e88e5;
+    }
+
+    #stopBtn {
+      background-color: #e53935;
+    }
+
+    #startBtn:disabled, #stopBtn:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+
+    audio {
+      margin-top: 20px;
+      width: 300px;
+    }
+
+    #uploadStatus {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    #transcription, #finalMessage {
+      margin-top: 20px;
+      font-size: 18px;
+      max-width: 600px;
+      text-align: center;
+      white-space: pre-wrap;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    #transcription {
+      color: #90caf9;
+      border: 1px solid #90caf9;
+    }
+
+    #finalMessage {
+      color: #66bb6a;
+      border: 1px solid #66bb6a;
+    }
+
+    .success {
+      color: #66bb6a;
+    }
+
+    .error {
+      color: #ef5350;
+    }
+
+    .info {
+      color: #ffb74d;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎤 Record and Upload Audio</h1>
+  <button id="startBtn">Start Recording</button>
+  <button id="stopBtn" disabled>Stop Recording</button>
+  <audio id="audioPlayback" controls></audio>
+
+  <p id="uploadStatus"></p>
+  <div id="transcription"></div>
+  <div id="finalMessage"></div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        document.getElementById("audioPlayback").src = audioUrl;
+
+        const formData = new FormData();
+        formData.append("audio_file", audioBlob, "recording.webm");
+
+        const statusEl = document.getElementById("uploadStatus");
+        const transcriptionEl = document.getElementById("transcription");
+        const finalMessageEl = document.getElementById("finalMessage");
+
+        statusEl.className = "info";
+        statusEl.innerText = "Uploading...";
+
+        fetch("http://localhost:8000/api/v1/audio/upload-audio/", {
+          method: "POST",
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log("Server response:", data);
+          statusEl.className = "success";
+          statusEl.innerText = "✅ Upload successful!";
+
+          if (data.transcription) {
+            transcriptionEl.innerText = `📝 Transcription:\n${data.transcription}`;
+          } else {
+            transcriptionEl.innerText = `⚠ No transcription received.`;
+          }
+
+          if (data.final_message) {
+            finalMessageEl.innerText = `🛒 Shopping Assistant Response:\n${data.final_message}`;
+          } else {
+            finalMessageEl.innerText = `⚠ No final message generated.`;
+          }
+        })
+        .catch(error => {
+          console.error("Upload failed:", error);
+          statusEl.className = "error";
+          statusEl.innerText = "❌ Upload failed!";
+          transcriptionEl.innerText = "";
+          finalMessageEl.innerText = "";
+        });
+      };
+
+      mediaRecorder.start();
+      document.getElementById("startBtn").disabled = true;
+      document.getElementById("stopBtn").disabled = false;
+    });
+
+    document.getElementById("stopBtn").addEventListener("click", () => {
+      mediaRecorder.stop();
+      document.getElementById("startBtn").disabled = false;
+      document.getElementById("stopBtn").disabled = true;
+    });
+  </script>
+</body>
+</html>
+
